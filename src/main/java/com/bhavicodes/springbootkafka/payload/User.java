@@ -3,6 +3,19 @@ package com.bhavicodes.springbootkafka.payload;
 public class User {
 
     private  int id;
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", lastname='" + lastname + '\'' +
+                ", firstname='" + firstname + '\'' +
+                '}';
+    }
+
+    public User() {
+    }
+
     private String firstname;
     private String lastname;
 
@@ -30,4 +43,9 @@ public class User {
         this.firstname = firstname;
     }
 
+    public User(String lastname, String firstname, int id) {
+        this.lastname = lastname;
+        this.firstname = firstname;
+        this.id = id;
+    }
 }

@@ -1,5 +1,6 @@
 package com.bhavicodes.springbootkafka.kafka;
 
+import com.bhavicodes.springbootkafka.payload.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,5 +18,11 @@ public class KafkaConsumer {
     public void consumer(String message)
     {
         LOGGER.info(String.format("Received Message: %s", message));
+    }
+
+    @KafkaListener(topics = "KafkaJsonTopic" , groupId = "kafkagroup")
+    public void jsonConsumer(User user)
+    {
+        LOGGER.info(String.format("Received Message json format : "+ user.toString()));
     }
 }
