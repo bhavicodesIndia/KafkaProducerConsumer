@@ -2,7 +2,7 @@ package com.bhavicodes.springbootkafka.payload;
 
 public class User {
 
-    private  int id;
+    public  int id;
 
     @Override
     public String toString() {
@@ -16,8 +16,8 @@ public class User {
     public User() {
     }
 
-    private String firstname;
-    private String lastname;
+    public String firstname;
+    public String lastname;
 
     public int getId() {
         return id;
