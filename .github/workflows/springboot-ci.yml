@@ -1,4 +1,4 @@
-name: Spring Boot CI Pipeline
+name: Spring Boot CI/CD Pipeline to AWS EC2
 
 on:
   push:
@@ -8,24 +8,28 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Spring Boot Application
+  build-and-deploy:
+    name: Build & Deploy Spring Boot App to AWS EC2
     runs-on: ubuntu-latest
 
     steps:
+      # 🧩 Step 1 — Checkout Code
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 🧩 Step 2 — Set up JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
+      # 🧩 Step 3 — Build with Maven
       - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: Copy jar to EC2
+      # 🧩 Step 4 — Copy JAR to EC2
+      - name: Copy JAR to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -34,14 +38,39 @@ jobs:
           source: "target/*.jar"
           target: "/home/${{ secrets.EC2_USER }}/app/"
 
+      # 🧩 Step 5 — Restart the Spring Boot app on EC2
       - name: Restart Spring Boot App
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Stopping any running app..."
+            echo "🔹 Navigating to app directory..."
+            cd /home/${{ secrets.EC2_USER }}/app
+
+            echo "🔹 Stopping any running Spring Boot process..."
             pkill -f '${{ secrets.APP_NAME }}' || true
-            echo "Starting new version..."
+
+            echo "🔹 Starting new version..."
             nohup java -jar /home/${{ secrets.EC2_USER }}/app/${{ secrets.APP_NAME }} > app.log 2>&1 &
+
+            sleep 5
             echo "✅ Spring Boot App Deployed Successfully!"
+
+      # 🧩 Step 6 — Optional: Verify the app is running on port 8080
+      - name: Verify App Health
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🔍 Checking if app is running..."
+            if sudo lsof -i:8080; then
+              echo "✅ Port 8080 is active — app is running!"
+            else
+              echo "❌ App not detected on port 8080 — check app.log"
+              cat /home/${{ secrets.EC2_USER }}/app/app.log | tail -n 20
+              exit 1
+            fi
