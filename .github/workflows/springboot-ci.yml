@@ -38,16 +38,21 @@ jobs:
           source: "target/*.jar"
           target: "/home/${{ secrets.EC2_USER }}/app/"
 
-      # 🧩 Step 5 — Restart the Spring Boot app on EC2
+      # 🧩 Step 5 — Restart the Spring Boot app
       - name: Restart Spring Boot App
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: false
+          command_timeout: 15m
           script: |
             echo "🔹 Navigating to app directory..."
             cd /home/${{ secrets.EC2_USER }}/app
+
+            echo "🔹 Listing files..."
+            ls -lh
 
             echo "🔹 Stopping any running Spring Boot process..."
             pkill -f '${{ secrets.APP_NAME }}' || true
@@ -55,10 +60,13 @@ jobs:
             echo "🔹 Starting new version..."
             nohup java -jar /home/${{ secrets.EC2_USER }}/app/${{ secrets.APP_NAME }} > app.log 2>&1 &
 
-            sleep 5
-            echo "✅ Spring Boot App Deployed Successfully!"
+            echo "⏳ Waiting 10 seconds before health check..."
+            sleep 10
 
-      # 🧩 Step 6 — Optional: Verify the app is running on port 8080
+            echo "✅ Spring Boot App Deployed Successfully!"
+            tail -n 15 app.log
+
+      # 🧩 Step 6 — Verify that the app is running on port 8080
       - name: Verify App Health
         uses: appleboy/ssh-action@v0.1.10
         with:
@@ -70,7 +78,7 @@ jobs:
             if sudo lsof -i:8080; then
               echo "✅ Port 8080 is active — app is running!"
             else
-              echo "❌ App not detected on port 8080 — check app.log"
-              cat /home/${{ secrets.EC2_USER }}/app/app.log | tail -n 20
+              echo "❌ App not detected on port 8080 — showing recent logs:"
+              tail -n 20 /home/${{ secrets.EC2_USER }}/app/app.log
               exit 1
             fi
