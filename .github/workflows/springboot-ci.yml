@@ -39,7 +39,7 @@ jobs:
           target: "/home/${{ secrets.EC2_USER }}/app"
           strip_components: 1
           debug: true
-          
+
 
           # 🧩 Step 5 — Restart the Spring Boot app
       - name: Restart Spring Boot App
@@ -53,25 +53,26 @@ jobs:
           script: |
             echo "🔹 Navigating to app directory..."
             cd /home/${{ secrets.EC2_USER }}/app
-
-            echo "🔹 Listing files in app dir..."
+            
+            echo "🔹 Listing files..."
             ls -lh
-
+            
             if [ ! -f "${{ secrets.APP_NAME }}" ]; then
               echo "❌ ERROR: JAR file not found — deployment aborted!"
               exit 1
             fi
-
+            
             echo "🔹 Stopping any running Spring Boot process..."
             pkill -f '${{ secrets.APP_NAME }}' || true
-
-            echo "🔹 Starting new version..."
+            
+            echo "🔹 Starting new version in background..."
             nohup java -jar /home/${{ secrets.EC2_USER }}/app/${{ secrets.APP_NAME }} > app.log 2>&1 &
-
-            echo "⏳ Waiting 10 seconds before health check..."
-            sleep 10
-            echo "✅ Spring Boot App Deployed Successfully!"
-            tail -n 10 app.log
+            disown
+            
+            sleep 8
+            echo "✅ Spring Boot App started successfully!"
+            echo "🔍 Checking running process..."
+            ps aux | grep java
 
       # 🧩 Step 6 — Verify that the app is running on port 8080
       - name: Verify App Health
