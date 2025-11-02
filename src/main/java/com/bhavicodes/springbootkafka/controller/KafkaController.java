@@ -18,6 +18,11 @@ public class KafkaController {
         this.kafkaProducer = kafkaProducer;
     }
 
+    @GetMapping("/check/health")
+    public ResponseEntity<String> checkHealth() {
+        return ResponseEntity.ok("The  server is up and running");
+    }
+
     @GetMapping("/publish")
     public ResponseEntity<String> publish(@RequestParam("message") String message)
     {
