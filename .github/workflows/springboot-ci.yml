@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -22,17 +22,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-
-      - name: Cache Maven Dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-      - name: Build Project
+      - name: Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: Upload JAR Artifact
-        uses: actions/upload-artifact@v4
+      - name: Copy jar to EC2
+        uses: appleboy/scp-action@v0.1.7
         with:
-          name: springboot-application
-          path: target/*.jar
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "target/*.jar"
+          target: "/home/${{ secrets.EC2_USER }}/app/"
+
+      - name: Restart Spring Boot App
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Stopping any running app..."
+            pkill -f '${{ secrets.APP_NAME }}' || true
+            echo "Starting new version..."
+            nohup java -jar /home/${{ secrets.EC2_USER }}/app/${{ secrets.APP_NAME }} > app.log 2>&1 &
+            echo "✅ Spring Boot App Deployed Successfully!"
